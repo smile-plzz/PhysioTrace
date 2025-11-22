@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthSim Charity | Education & Awareness</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        medical: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9', // Trustworthy Blue
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        slate: {
+                            850: '#1e293b', 
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'card': '0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04)',
+                    },
+                    animation: {
+                        'beat': 'beat 1s infinite',
+                    },
+                    keyframes: {
+                        beat: {
+                            '0%, 100%': { transform: 'scale(1)' },
+                            '15%': { transform: 'scale(1.15)' },
+                            '30%': { transform: 'scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f8fafc; color: #0f172a; }
+        
+        /* Custom Range Slider - Clean Style */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px; width: 24px;
+            border-radius: 50%;
+            background: #0ea5e9;
+            cursor: pointer;
+            margin-top: -9px; /* Align with track */
+            box-shadow: 0 2px 6px rgba(14, 165, 233, 0.4);
+            border: 3px solid #fff;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px;
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Chart Containers */
+        .chart-wrapper { position: relative; height: 100%; width: 100%; min-height: 250px; }
+
+        /* Typography Overrides */
+        h1, h2, h3 { color: #0f172a; }
+        .text-label { color: #64748b; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* Organ Containers */
+        .organ-box {
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <div id="disclaimer-gate" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100">
+            <div class="bg-medical-50 p-8 border-b border-medical-100 flex flex-col items-center text-center">
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm text-3xl">
+                    🏥
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">Welcome to HealthSim</h2>
+                <p class="text-slate-500 mt-2">A generic public health education tool.</p>
+            </div>
+            <div class="p-8">
+                <div class="text-slate-600 text-sm space-y-4 mb-8 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <p class="font-semibold text-slate-800">Before you begin:</p>
+                    <ul class="list-disc pl-4 space-y-2">
+                        <li>This tool is for **educational purposes only**.</li>
+                        <li>The simulations are statistical estimations, not personalized medical advice.</li>
+                        <li>Always consult a doctor before changing medication.</li>
+                    </ul>
+                </div>
+                <button id="btn-accept-disclaimer" class="w-full bg-medical-600 hover:bg-medical-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-medical-500/30 active:scale-[0.98]">
+                    I Understand & Agree
+                </button>
+            </div>
+            <div class="bg-slate-50 p-3 text-center border-t border-slate-100">
+                <p class="text-[10px] text-slate-400">Not for clinical use. v3.4-Public</p>
+            </div>
+        </div>
+    </div>
+
+    <nav class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 z-50 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-medical-600 flex items-center justify-center text-white font-bold shadow-md shadow-medical-500/20">H</div>
+            <div>
+                <h1 class="font-bold text-lg tracking-tight text-slate-800">Health<span class="text-medical-600">Sim</span></h1>
+            </div>
+        </div>
+        
+        <div class="hidden md:block relative w-96 group z-50">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <input type="text" id="global-search" placeholder="Search medication (e.g., 'Caffeine')..." class="w-full bg-slate-50 border border-slate-200 rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-all placeholder-slate-400 text-slate-700 outline-none">
+            <div id="search-loading" class="hidden absolute right-3 top-2.5 text-medical-600 animate-spin">⟳</div>
+            <div id="search-dropdown" class="hidden absolute top-12 left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden z-50"></div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button id="btn-report" class="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-xs font-bold transition-all hover:bg-slate-50 hover:text-medical-600 hover:border-medical-200 shadow-sm">
+                <span>📄</span> Summary Report
+            </button>
+            <button id="btn-settings" class="p-2 text-slate-400 hover:text-slate-700 transition-colors rounded-full hover:bg-slate-100" title="Edit Patient Profile">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="flex-1 flex overflow-hidden relative bg-slate-50">
+        
+        <aside class="w-full md:w-80 bg-white border-r border-slate-200 flex flex-col z-20 h-full shadow-soft">
+            <div class="p-6 border-b border-slate-100">
+                <h2 class="text-label mb-4">Patient Vitals</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-medium">Daily Calorie Needs</div>
+                        <div class="text-lg font-bold text-slate-800" id="val-bmr">--</div>
+                        <div class="text-[10px] text-slate-400">kcal/day</div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-medium">Body Surface</div>
+                        <div class="text-lg font-bold text-slate-800" id="val-bsa">--</div>
+                        <div class="text-[10px] text-slate-400">m²</div>
+                    </div>
+                </div>
+                <div class="hidden" id="val-vd">--</div> 
+            </div>
+
+            <div class="p-6 flex-1 overflow-y-auto">
+                <h2 class="text-label mb-4">Medication Schedule</h2>
+                
+                <div class="bg-white p-4 rounded-xl shadow-card mb-4 border border-slate-100 relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-medical-500"></div>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="px-2 py-0.5 rounded bg-medical-50 text-medical-600 text-[10px] font-bold uppercase border border-medical-100" id="drug-class-badge">NSAID</span>
+                        <span class="text-xs text-slate-400" id="drug-hl-badge">HL: 2.0h</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-1" id="drug-name-display">Ibuprofen</h3>
+                    
+                    <div class="mt-4 bg-slate-50 rounded-lg p-3 border border-slate-100">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold mb-2">Dose Log</div>
+                        <div id="dose-list" class="space-y-2 max-h-32 overflow-y-auto pr-1">
+                            </div>
+                    </div>
+
+                    <div class="flex gap-2 mt-4">
+                        <button id="btn-add-dose" class="flex-1 bg-medical-500 hover:bg-medical-600 text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-md shadow-medical-500/20">
+                            <span>+</span> Take Dose Now
+                        </button>
+                        <button id="btn-reset-doses" class="px-3 bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs font-bold py-2.5 rounded-lg transition-colors" title="Reset Schedule">
+                            ↺
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-card border border-slate-100">
+                    <div class="flex justify-between text-[10px] text-slate-500 mb-2 font-medium">
+                        <span>System Saturation</span>
+                        <span id="plasma-percent" class="text-slate-900 font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div id="metabolism-bar" class="bg-medical-500 h-full w-0 transition-all duration-500 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="safety-warning" class="p-4 bg-red-50 border-t border-red-100 hidden">
+                <div class="flex items-center gap-2 text-red-600 text-xs font-bold uppercase">⚠️ Safety Alert</div>
+                <p class="text-xs text-red-700 mt-1" id="safety-text">Pediatric precaution needed.</p>
+            </div>
+        </aside>
+
+        <main class="flex-1 relative flex flex-col bg-slate-50/50">
+            
+            <div class="flex items-center justify-center pt-6 pb-2 gap-2 px-4">
+                <button onclick="switchView('anatomy')" id="tab-anatomy" class="px-5 py-2 rounded-full bg-white text-medical-600 shadow-sm border border-medical-100 text-xs font-bold uppercase tracking-wide transition-all">🫀 Body Map</button>
+                <button onclick="switchView('hub')" id="tab-hub" class="px-5 py-2 rounded-full bg-transparent text-slate-400 border border-transparent hover:bg-white hover:text-slate-600 text-xs font-bold uppercase tracking-wide transition-all">📊 Data Hub</button>
+            </div>
+
+            <div id="view-anatomy" class="flex-1 flex items-center justify-center relative overflow-hidden view-section">
+                <div class="absolute top-6 right-6 z-10 text-right">
+                    <div class="text-4xl font-bold text-slate-800" id="clock-display">T+00:00</div>
+                    <div class="text-slate-400 text-xs font-medium uppercase tracking-wider">Time Since Start</div>
+                </div>
+                
+                <div class="absolute inset-0 z-0 opacity-[0.03]" style="background-image: radial-gradient(#0f172a 1px, transparent 1px); background-size: 24px 24px;"></div>
+                
+                <div class="relative w-80 h-[560px] z-10 transition-all duration-700" id="body-container">
+                    <div id="body-aura" class="absolute -inset-4 bg-medical-200/30 rounded-[4rem] blur-3xl transition-all duration-1000 opacity-50"></div>
+                    
+                    <div class="absolute inset-0 border-2 border-slate-200/50 rounded-[3rem] z-0"></div>
+
+                    <div id="organ-brain" class="organ-box absolute top-4 left-1/2 -translate-x-1/2 w-24 h-20 bg-white border border-slate-100 rounded-2xl flex flex-col items-center justify-center shadow-card z-20">
+                         <svg class="w-8 h-8 text-current mb-1 opacity-80" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a6 6 0 016 6c0 1.44-.5 2.78-1.35 3.79.96.68 1.76 1.59 2.35 2.63A6.004 6.004 0 0118 22H6a6.004 6.004 0 01-1-7.58c.59-1.04 1.39-1.95 2.35-2.63A5.965 5.965 0 016 8a6 6 0 016-6z" opacity="0.4"/><path d="M12 4a4 4 0 100 8 4 4 0 000-8z"/></svg>
+                         <span class="text-[9px] font-bold uppercase tracking-wide">Brain</span>
+                    </div>
+
+                    <div class="absolute top-28 left-1/2 -translate-x-1/2 w-48 h-64 bg-white/60 backdrop-blur-sm border border-slate-100 rounded-[2.5rem] z-10 grid grid-cols-2 p-4 gap-3 shadow-lg">
+                        
+                        <div class="col-span-2 flex justify-center h-16 items-center relative">
+                            <div id="organ-heart" class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-md border border-slate-100 text-red-500 transition-all duration-300">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg>
+                            </div>
+                        </div>
+
+                        <div id="organ-liver" class="organ-box col-span-1 h-24 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center shadow-sm">
+                             <svg class="w-6 h-6 text-current opacity-70 mb-1" viewBox="0 0 24 24" fill="currentColor"><path d="M16.65 4.45c-1.55-.65-3.75-1-5.65-1-5.8 0-9 3-9 7 0 2.15 1 4.25 2.65 5.6.4.35.5.9.25 1.35-.75 1.35-2.9 1.65-2.9 1.65v3.95h18c1.1 0 2-.9 2-2v-6.6c0-4.4-1.6-8.3-5.35-9.95z"/></svg>
+                             <span class="text-[9px] font-bold uppercase">Liver</span>
+                        </div>
+
+                        <div id="organ-stomach" class="organ-box col-span-1 h-20 mt-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center shadow-sm">
+                            <svg class="w-6 h-6 text-current opacity-70 mb-1" viewBox="0 0 24 24" fill="currentColor"><path d="M7.52 4.22A29.48 29.48 0 0112 3.5c3.06 0 6.01.48 8.77 1.37a1 1 0 01.67 1.25c-.21.66-.85 1.07-1.54 1.07-1.33 0-2.79.47-3.87 1.53-1.55 1.52-1.85 3.79-1.43 5.8.41 1.93 2.14 3.38 4.1 3.48h.13c.98 0 1.86.6 2.17 1.54l.1.3c.36 1.05-.42 2.16-1.53 2.16H6c-1.1 0-2-.9-2-2V5.5c0-.72.39-1.36 1-1.72.52-.31 1.02-.58 1.52-.82z"/></svg>
+                            <span class="text-[9px] font-bold uppercase">Stomach</span>
+                        </div>
+                    </div>
+                    
+                    <div id="organ-kidney" class="organ-box absolute bottom-8 left-1/2 -translate-x-1/2 w-32 h-12 bg-slate-50 rounded-full border border-slate-100 flex flex-col items-center justify-center shadow-sm">
+                        <div class="flex items-center gap-1 text-current opacity-70">
+                            <span class="text-[9px] font-bold uppercase">Kidneys</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-hub" class="flex-1 p-4 md:p-8 overflow-hidden flex flex-col hidden view-section bg-slate-50">
+                
+                <div class="flex border-b border-slate-200 mb-6 overflow-x-auto no-scrollbar">
+                    <button onclick="switchHubTab('general')" id="hub-tab-general" class="px-6 py-3 text-sm font-bold text-medical-600 border-b-2 border-medical-600 transition-all whitespace-nowrap">Overview</button>
+                    <button onclick="switchHubTab('pk')" id="hub-tab-pk" class="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-800 border-b-2 border-transparent transition-all whitespace-nowrap">Drug Levels</button>
+                    <button onclick="switchHubTab('cardiac')" id="hub-tab-cardiac" class="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-800 border-b-2 border-transparent transition-all whitespace-nowrap">Heart</button>
+                    <button onclick="switchHubTab('neuro')" id="hub-tab-neuro" class="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-800 border-b-2 border-transparent transition-all whitespace-nowrap">Neuro</button>
+                    <button onclick="switchHubTab('metabolic')" id="hub-tab-metabolic" class="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-800 border-b-2 border-transparent transition-all whitespace-nowrap">Organ Stress</button>
+                </div>
+
+                <div id="hub-view-general" class="hub-view flex-1 overflow-y-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                        
+                        <div class="bg-white rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-card border border-slate-100">
+                            <div class="relative w-40 h-40 mb-4 flex items-center justify-center">
+                                <svg class="w-full h-full transform -rotate-90"><circle cx="80" cy="80" r="70" stroke="#f1f5f9" stroke-width="12" fill="none"/><circle id="system-gauge" cx="80" cy="80" r="70" stroke="#0ea5e9" stroke-width="12" fill="none" stroke-dasharray="440" stroke-dashoffset="440" class="transition-all duration-1000" stroke-linecap="round"/></svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span class="text-4xl font-bold text-slate-800" id="system-score">0%</span>
+                                    <span class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Load</span>
+                                </div>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-800 mb-1" id="phase-text">Absorption Phase</h3>
+                            <p class="text-sm text-slate-500" id="phase-desc">Drug is entering circulation.</p>
+                        </div>
+                        
+                        <div class="bg-white rounded-2xl p-6 col-span-2 shadow-card border border-slate-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold text-slate-800">Predicted Effects</h3>
+                                <span class="text-xs text-medical-600 bg-medical-50 px-3 py-1 rounded-full font-bold border border-medical-100">Live Simulation</span>
+                            </div>
+                            <div id="symptom-list" class="space-y-3"></div>
+                        </div>
+                        
+                        <div class="col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-white p-4 rounded-xl shadow-card border border-slate-100"><div class="text-label mb-1">Active Level</div><div class="text-2xl font-bold text-medical-600" id="gen-conc">0%</div></div>
+                            <div class="bg-white p-4 rounded-xl shadow-card border border-slate-100"><div class="text-label mb-1">Heart Rate Δ</div><div class="text-2xl font-bold text-rose-500" id="gen-hr">0 bpm</div></div>
+                            <div class="bg-white p-4 rounded-xl shadow-card border border-slate-100"><div class="text-label mb-1">Liver Stress</div><div class="text-2xl font-bold text-emerald-500" id="gen-liver">Normal</div></div>
+                            <div class="bg-white p-4 rounded-xl shadow-card border border-slate-100"><div class="text-label mb-1">Primary Effect</div><div class="text-2xl font-bold text-indigo-500" id="gen-effect">--</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hub-view-pk" class="hub-view hidden flex-1 flex flex-col">
+                    <div class="bg-white rounded-2xl p-6 flex-1 flex flex-col relative shadow-card border border-slate-100">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Cumulative Active Levels</h2>
+                        <div class="chart-wrapper flex-1"><canvas id="pkChart"></canvas></div>
+                    </div>
+                </div>
+                <div id="hub-view-cardiac" class="hub-view hidden flex-1 flex flex-col">
+                    <div class="bg-white rounded-2xl p-6 flex-1 flex flex-col relative shadow-card border border-slate-100">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Cardiac Response</h2>
+                        <div class="chart-wrapper flex-1"><canvas id="cardiacChart"></canvas></div>
+                    </div>
+                </div>
+                <div id="hub-view-neuro" class="hub-view hidden flex-1 flex flex-col items-center justify-center">
+                    <div class="bg-white rounded-2xl p-6 w-full h-full flex flex-col shadow-card border border-slate-100">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Neurological Profile</h2>
+                        <div class="chart-wrapper w-full h-full"><canvas id="radarChart"></canvas></div>
+                    </div>
+                </div>
+                <div id="hub-view-metabolic" class="hub-view hidden flex-1 flex flex-col">
+                    <div class="bg-white rounded-2xl p-6 flex-1 flex flex-col relative shadow-card border border-slate-100">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Organ Toxicity Load</h2>
+                        <div class="chart-wrapper flex-1"><canvas id="metabolicChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-28 bg-white border-t border-slate-200 flex items-center px-8 z-30 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
+                <div class="w-full max-w-4xl mx-auto">
+                    <div class="flex justify-between text-xs font-bold text-slate-400 mb-3 font-sans">
+                        <span>Ingestion (0h)</span>
+                        <span class="text-medical-600 bg-medical-50 px-2 py-1 rounded border border-medical-100">Current: <span id="slider-val">0.0</span>h</span>
+                        <span>Clearance (24h)</span>
+                    </div>
+                    <input type="range" id="timeline" min="0" max="24" step="0.1" value="0" class="w-full accent-medical-500">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="report-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex items-center gap-2"><span class="text-medical-600 text-xl">✨</span><h2 class="text-lg font-bold text-slate-800">AI Clinical Observation</h2></div>
+                <button id="close-report" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-8 overflow-y-auto flex-1"><div id="report-content" class="prose prose-slate text-sm leading-relaxed text-slate-600">Generating analysis...</div></div>
+        </div>
+    </div>
+    
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center"><h2 class="text-xl font-bold text-slate-800">Edit Patient Profile</h2><button id="close-settings" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button></div>
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-2 gap-5">
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Gender</label><select id="set-gender" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-medical-500 outline-none"><option value="male">Male</option><option value="female">Female</option></select></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Age (yrs)</label><input type="number" id="set-age" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-medical-500 outline-none" value="30"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-5">
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Weight (kg)</label><input type="number" id="set-weight" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-medical-500 outline-none" value="70"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Height (cm)</label><input type="number" id="set-height" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-medical-500 outline-none" value="175"></div>
+                </div>
+                <button id="save-settings" class="w-full bg-medical-600 hover:bg-medical-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-medical-500/20 mt-2">Update Bio-Metrics</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; // Insert Key Here if needed
+        const store = { 
+            user: { gender: 'male', age: 30, weight: 70, height: 175, bmr: 0, bsa: 0, vd: 0 }, 
+            drug: null, 
+            time: 0, 
+            doses: [],
+            db: [{ id: 'ibuprofen', name: "Ibuprofen 400mg", type: "NSAID", halfLife: 2.0, tMax: 1.5, organImpact: { liver: 3, stomach: 8, kidney: 4, brain: 1 }, vitals: { hr: 0, bp: 2 }, mood: { pain: 8, drowsiness: 2, nausea: 4, alertness: 0 } }, { id: 'caffeine', name: "Caffeine 150mg", type: "Stimulant", halfLife: 5.0, tMax: 0.75, organImpact: { liver: 5, stomach: 4, kidney: 2, brain: 9 }, vitals: { hr: 15, bp: 8 }, mood: { pain: 0, drowsiness: -8, nausea: 2, alertness: 9 } }] 
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            checkDisclaimer(); loadProfile(); initCharts(); 
+            selectDrug(store.db[0]);
+            
+            document.getElementById('timeline').addEventListener('input', handleTimeChange);
+            document.getElementById('global-search').addEventListener('input', debounce(handleSearch, 400));
+            document.getElementById('btn-settings').addEventListener('click', () => toggleModal('settings-modal', true));
+            document.getElementById('close-settings').addEventListener('click', () => toggleModal('settings-modal', false));
+            document.getElementById('save-settings').addEventListener('click', saveProfileUI);
+            document.getElementById('btn-report').addEventListener('click', generateClinicalReport);
+            document.getElementById('close-report').addEventListener('click', () => toggleModal('report-modal', false));
+            
+            // Dose Buttons
+            document.getElementById('btn-add-dose').addEventListener('click', addDoseAtCurrentTime);
+            document.getElementById('btn-reset-doses').addEventListener('click', resetDoses);
+
+            setTimeout(() => switchView('anatomy'), 100);
+        });
+
+        // --- VIEW CONTROLLER ---
+        function switchView(view) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            // Reset Tab Styles
+            ['tab-anatomy', 'tab-hub'].forEach(id => {
+                document.getElementById(id).className = "px-5 py-2 rounded-full bg-transparent text-slate-400 border border-transparent hover:bg-white hover:text-slate-600 text-xs font-bold uppercase tracking-wide transition-all";
+            });
+            // Active Tab Style
+            document.getElementById(`tab-${view}`).className = "px-5 py-2 rounded-full bg-white text-medical-600 shadow-sm border border-medical-100 text-xs font-bold uppercase tracking-wide transition-all";
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            if(view === 'hub') switchHubTab('general'); 
+        }
+
+        function switchHubTab(tab) {
+            document.querySelectorAll('.hub-view').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="hub-tab-"]').forEach(el => el.className = "px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-800 border-b-2 border-transparent transition-all whitespace-nowrap");
+            document.getElementById(`hub-tab-${tab}`).className = "px-6 py-3 text-sm font-bold text-medical-600 border-b-2 border-medical-600 transition-all whitespace-nowrap";
+            document.getElementById(`hub-view-${tab}`).classList.remove('hidden');
+            if(tab==='pk') pkChart.resize(); if(tab==='cardiac') cardiacChart.resize(); if(tab==='neuro') radarChart.resize(); if(tab==='metabolic') metabolicChart.resize();
+        }
+
+        // --- MULTI-DOSE ENGINE ---
+        function addDoseAtCurrentTime() {
+            store.doses.push({ time: store.time });
+            renderDoseList();
+            updateVisuals();
+        }
+
+        function resetDoses() {
+            store.doses = [{ time: 0 }]; // Reset to initial single dose
+            renderDoseList();
+            updateVisuals();
+        }
+
+        function renderDoseList() {
+            const list = document.getElementById('dose-list');
+            list.innerHTML = '';
+            store.doses.forEach((dose, index) => {
+                list.innerHTML += `<div class="flex justify-between items-center text-xs text-slate-600 bg-white px-3 py-2 rounded border border-slate-200 shadow-sm"><span>💊 Dose ${index + 1}</span><span class="font-mono">T+${dose.time.toFixed(1)}h</span></div>`;
+            });
+        }
+
+        function calculateTotalConcentration(evalTime, drug) {
+            let total = 0;
+            store.doses.forEach(dose => {
+                const timeSinceDose = evalTime - dose.time;
+                if (timeSinceDose >= 0) {
+                    const k = 0.693 / drug.halfLife;
+                    const ka = k * 3;
+                    const c = (100 * ka / (ka - k)) * (Math.exp(-k * timeSinceDose) - Math.exp(-ka * timeSinceDose));
+                    total += Math.max(0, c);
+                }
+            });
+            return total;
+        }
+
+        function handleTimeChange(e) { store.time = parseFloat(e.target.value); updateVisuals(); }
+
+        function updateVisuals() {
+            const t = store.time; const drug = store.drug; if (!drug) return;
+            const h = Math.floor(t); const m = Math.floor((t - h) * 60);
+            document.getElementById('clock-display').textContent = `T+${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            document.getElementById('slider-val').textContent = t.toFixed(1);
+            
+            const conc = calculateTotalConcentration(t, drug);
+            const intensity = conc / 100; 
+            
+            document.getElementById('plasma-percent').textContent = `${conc.toFixed(1)}%`;
+            const barWidth = Math.min(conc, 100);
+            document.getElementById('metabolism-bar').style.width = `${barWidth}%`;
+            document.getElementById('metabolism-bar').className = conc > 100 ? "bg-rose-500 h-full transition-all duration-500 rounded-full" : "bg-medical-500 h-full transition-all duration-500 rounded-full";
+
+            document.getElementById('gen-conc').textContent = `${conc.toFixed(0)}%`;
+            document.getElementById('gen-hr').textContent = `${(drug.vitals.hr * intensity).toFixed(1)} bpm`;
+            document.getElementById('system-score').textContent = `${Math.round(conc)}%`;
+            const offset = 440 - (440 * (Math.min(conc, 100) / 100));
+            document.getElementById('system-gauge').style.strokeDashoffset = offset;
+            document.getElementById('system-gauge').style.stroke = conc > 100 ? '#f43f5e' : '#0ea5e9';
+            
+            const lastDoseTime = store.doses.length > 0 ? store.doses[store.doses.length-1].time : 0;
+            const timeSinceLast = t - lastDoseTime;
+            const phaseEl = document.getElementById('phase-text');
+            const descEl = document.getElementById('phase-desc');
+            
+            if (timeSinceLast < 0) { phaseEl.textContent = "Waiting"; descEl.textContent = "Dose not yet taken."; phaseEl.className="text-lg font-bold text-slate-400 mb-1"; }
+            else if (timeSinceLast < drug.tMax) { phaseEl.textContent = "Absorption Phase"; descEl.textContent = "Recent dose levels rising."; phaseEl.className="text-lg font-bold text-emerald-500 mb-1"; }
+            else if (timeSinceLast < drug.tMax + drug.halfLife) { phaseEl.textContent = "Peak/Distribution"; descEl.textContent = "Max effect of recent dose."; phaseEl.className="text-lg font-bold text-amber-500 mb-1"; }
+            else { phaseEl.textContent = "Elimination Phase"; descEl.textContent = "Clearing recent dose."; phaseEl.className="text-lg font-bold text-indigo-500 mb-1"; }
+
+            let primary = "Baseline"; let maxMood = 0;
+            for(const [key, val] of Object.entries(drug.mood)) { if(Math.abs(val) > maxMood) { maxMood = Math.abs(val); primary = key; } }
+            document.getElementById('gen-effect').textContent = primary.charAt(0).toUpperCase() + primary.slice(1);
+
+            const list = document.getElementById('symptom-list'); list.innerHTML = ''; const symptoms = [];
+            if (intensity > 0.2) {
+                if (drug.vitals.hr > 5) symptoms.push({icon: '❤️', text: 'Elevated Heart Rate', sub: 'Possible palpitation'});
+                if (drug.mood.drowsiness > 3) symptoms.push({icon: '💤', text: 'Drowsiness', sub: 'Do not operate machinery'});
+                if (drug.mood.alertness > 3) symptoms.push({icon: '⚡', text: 'Heightened Alertness', sub: 'May affect sleep'});
+                if (drug.mood.nausea > 3) symptoms.push({icon: '🤢', text: 'Nausea Risk', sub: 'Take with food if possible'});
+                if (drug.mood.pain > 3) symptoms.push({icon: '🛡️', text: 'Pain Relief', sub: 'Analgesic effect active'});
+            }
+            if (conc > 100) symptoms.unshift({icon: '⚠️', text: 'Overdose Risk', sub: 'Exceeds standard limit'});
+
+            if (symptoms.length === 0) list.innerHTML = '<div class="text-slate-400 text-sm italic">No significant symptoms at current level.</div>';
+            else symptoms.slice(0, 3).forEach(s => list.innerHTML += `<div class="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100"><div class="w-10 h-10 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center text-lg">${s.icon}</div><div><div class="font-bold text-slate-700">${s.text}</div><div class="text-xs text-slate-500">${s.sub}</div></div></div>`);
+            
+            updateOrganVisual('organ-liver', drug.organImpact.liver, intensity);
+            updateOrganVisual('organ-stomach', drug.organImpact.stomach, intensity);
+            updateOrganVisual('organ-kidney', drug.organImpact.kidney, intensity);
+            updateOrganVisual('organ-brain', drug.organImpact.brain, intensity);
+            
+            const heart = document.getElementById('organ-heart');
+            const hrImpact = drug.vitals.hr * intensity;
+            if (hrImpact > 10) { heart.style.animationDuration = '0.5s'; heart.style.color = '#ef4444'; heart.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.3)'; } 
+            else if (hrImpact < -5) { heart.style.animationDuration = '1.5s'; heart.style.color = '#94a3b8'; } 
+            else { heart.style.animationDuration = '1s'; heart.style.color = '#ef4444'; heart.style.boxShadow = 'none'; }
+
+            updateCharts(drug, intensity);
+        }
+
+        function updateOrganVisual(id, load, intensity) {
+            const el = document.getElementById(id); const stress = load * intensity;
+            // Updated colors for light mode visibility
+            if (stress > 2) {
+                let color = stress > 6 ? '#ffe4e6' : '#fef9c3'; // Rose-100 or Yellow-100
+                let border = stress > 6 ? '#fda4af' : '#fde047';
+                let text = stress > 6 ? '#be123c' : '#a16207';
+                el.style.backgroundColor = color; el.style.color = text; el.style.borderColor = border;
+                // Scale effect
+                el.style.transform = stress > 6 ? 'scale(1.05)' : 'scale(1)';
+            } else {
+                el.style.backgroundColor = '#f8fafc'; el.style.color = ''; el.style.borderColor = '#f1f5f9'; el.style.transform = 'scale(1)';
+            }
+        }
+
+        // --- CHARTS (UPDATED FOR LIGHT MODE) ---
+        let pkChart, radarChart, cardiacChart, metabolicChart;
+        function initCharts() {
+            Chart.defaults.color = '#64748b'; Chart.defaults.borderColor = '#e2e8f0';
+            
+            const ctxPK = document.getElementById('pkChart').getContext('2d');
+            const gradPK = ctxPK.createLinearGradient(0,0,0,300); gradPK.addColorStop(0,'rgba(14, 165, 233, 0.5)'); gradPK.addColorStop(1,'rgba(14, 165, 233, 0)');
+            pkChart = new Chart(ctxPK, { type: 'line', data: { labels: Array.from({length:25},(_,i)=>i), datasets: [{ label:'Conc.', data:[], borderColor:'#0ea5e9', backgroundColor:gradPK, fill:true, tension:0.4, pointRadius:0 }, { label:'Now', data:[], borderColor:'#0f172a', borderDash:[4,4], pointRadius:0 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{min:0, max:150, grid:{color:'#f1f5f9'}}} } });
+            
+            const ctxCardiac = document.getElementById('cardiacChart').getContext('2d');
+            cardiacChart = new Chart(ctxCardiac, { type: 'line', data: { labels: Array.from({length:25},(_,i)=>i), datasets: [{ label:'HR Baseline', data:[], borderColor:'#94a3b8', borderDash:[5,5], pointRadius:0, borderWidth:2 }, { label:'HR Sim', data:[], borderColor:'#f43f5e', tension:0.4, pointRadius:0, borderWidth:3 }, { label:'BP Sys Sim', data:[], borderColor:'#a855f7', tension:0.4, pointRadius:0, borderWidth:2 }, { label:'Now', data:[], borderColor:'#0f172a', borderDash:[2,2], pointRadius:0 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true, labels:{color:'#475569'}}}, scales:{y:{suggestedMin:40, suggestedMax:140}} } });
+            
+            radarChart = new Chart(document.getElementById('radarChart'), { type: 'radar', data: { labels: ['Pain Relief', 'Drowsy', 'Nausea', 'Focus', 'Anxiety'], datasets: [{ label: 'Effect', data: [], backgroundColor: 'rgba(168, 85, 247, 0.2)', borderColor: '#a855f7', pointBackgroundColor: '#fff', pointRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100, grid: { color: '#e2e8f0' }, angleLines: { color: '#e2e8f0' }, pointLabels: { color: '#475569', font: { size: 12, family: "'Inter', sans-serif" } } } }, plugins: { legend: { display: false } } } });
+            
+            const ctxMeta = document.getElementById('metabolicChart').getContext('2d');
+            const gradMeta = ctxMeta.createLinearGradient(0,0,0,300); gradMeta.addColorStop(0,'rgba(16,185,129,0.5)'); gradMeta.addColorStop(1,'rgba(16,185,129,0)');
+            metabolicChart = new Chart(ctxMeta, { type: 'line', data: { labels: Array.from({length:25},(_,i)=>i), datasets: [{ label:'Liver Load', data:[], borderColor:'#10b981', backgroundColor:gradMeta, fill:true, tension:0.4, pointRadius:0 }, { label:'Kidney Load', data:[], borderColor:'#3b82f6', borderDash:[5,5], tension:0.4, pointRadius:0 }, { label:'Toxicity Limit', data:Array(25).fill(80), borderColor:'#f43f5e', borderDash:[2,2], borderWidth:1, pointRadius:0 }, { label:'Now', data:[], borderColor:'#0f172a', borderDash:[2,2], pointRadius:0 }] }, options: { responsive:true, maintainAspectRatio:false, scales:{y:{min:0, max:100}} } });
+        }
+
+        function updateCharts(drug, intensity) {
+            const t = store.time;
+            const pkData=[], hrBase=[], hrSim=[], bpSim=[], liverData=[], kidneyData=[], timeMarker=[];
+            for(let i=0; i<=24; i++) {
+                const c = calculateTotalConcentration(i, drug); 
+                const inte = c/100;
+                pkData.push(c); hrBase.push(70); hrSim.push(70 + (drug.vitals.hr * inte)); bpSim.push(120 + (drug.vitals.bp * inte));
+                liverData.push(c * (drug.organImpact.liver/10)); kidneyData.push(c * (drug.organImpact.kidney/10));
+                timeMarker.push(i === Math.round(t) ? 150 : null); 
+            }
+            pkChart.data.datasets[0].data=pkData; pkChart.data.datasets[1].data=timeMarker; pkChart.update('none');
+            cardiacChart.data.datasets[0].data=hrBase; cardiacChart.data.datasets[1].data=hrSim; cardiacChart.data.datasets[2].data=bpSim; cardiacChart.data.datasets[3].data=timeMarker.map(v=>v?140:null); cardiacChart.update('none');
+            radarChart.data.datasets[0].data=[drug.mood.pain*intensity*10, drug.mood.drowsiness*intensity*10, drug.mood.nausea*intensity*10, drug.mood.alertness*intensity*10, 20]; radarChart.update('none');
+            metabolicChart.data.datasets[0].data=liverData; metabolicChart.data.datasets[1].data=kidneyData; metabolicChart.data.datasets[3].data=timeMarker.map(v=>v?100:null); metabolicChart.update('none');
+        }
+
+        // --- SEARCH & UTILS ---
+        function selectDrug(drug) { 
+            store.drug = drug; 
+            store.doses = [{ time: 0 }];
+            document.getElementById('drug-name-display').textContent = drug.name; document.getElementById('drug-class-badge').textContent = drug.type; document.getElementById('drug-hl-badge').textContent = `HL: ${drug.halfLife}h`; document.getElementById('search-dropdown').classList.add('hidden'); document.getElementById('global-search').value = ''; 
+            renderDoseList();
+            updateVisuals(); 
+        }
+        
+        function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); }; }
+        async function handleSearch(e) {
+            const query = e.target.value.toLowerCase(); const dropdown = document.getElementById('search-dropdown'); if (query.length < 2) { dropdown.classList.add('hidden'); return; }
+            const local = store.db.filter(d => d.name.toLowerCase().includes(query)); dropdown.innerHTML = ''; dropdown.classList.remove('hidden');
+            if (local.length > 0) local.forEach(drug => { const item = document.createElement('div'); item.className = 'p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex justify-between'; item.innerHTML = `<span class="text-sm font-medium text-slate-700">${drug.name}</span><span class="text-xs text-slate-400">Cached</span>`; item.onclick = () => selectDrug(drug); dropdown.appendChild(item); });
+            const aiItem = document.createElement('div'); aiItem.className = 'p-3 bg-medical-50 hover:bg-medical-100 cursor-pointer text-medical-600 text-sm font-bold flex items-center gap-2 transition-colors'; aiItem.innerHTML = `<span>✨</span> Simulate "${query}" via AI`; aiItem.onclick = () => fetchAIDrug(query); dropdown.appendChild(aiItem);
+        }
+        async function fetchAIDrug(query) {
+            document.getElementById('search-loading').classList.remove('hidden'); document.getElementById('search-dropdown').classList.add('hidden');
+            const prompt = `Generate a pharmacokinetic JSON for "${query}": {"id":"str","name":"str","type":"str","halfLife":num,"tMax":num,"organImpact":{"liver":0-10,"stomach":0-10,"kidney":0-10,"brain":0-10},"vitals":{"hr":num,"bp":num},"mood":{"pain":0-10,"drowsiness":0-10,"nausea":0-10,"alertness":0-10}} Return ONLY JSON.`;
+            const jsonStr = await callGemini(prompt, true); document.getElementById('search-loading').classList.add('hidden');
+            if (jsonStr) { try { const newDrug = JSON.parse(jsonStr); newDrug.id = `ai-${Date.now()}`; store.db.push(newDrug); selectDrug(newDrug); } catch (e) { alert("Simulation generation failed."); } }
+        }
+        async function generateClinicalReport() { toggleModal('report-modal', true); document.getElementById('report-content').innerHTML = `<div class="flex flex-col items-center justify-center h-full space-y-4 text-slate-400"><div class="w-8 h-8 border-2 border-medical-500 border-t-transparent rounded-full animate-spin"></div><p>Analyzing biometrics...</p></div>`; const c=calculateTotalConcentration(store.time, store.drug); const prompt=`Patient:${store.user.age}y ${store.user.gender}. Drug:${store.drug.name}. T+${store.time}h. Conc:${c.toFixed(1)}%. Write simple educational summary (markdown).`; const r=await callGemini(prompt); if(r) document.getElementById('report-content').innerHTML=r.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'); }
+        async function callGemini(prompt, isJson = false) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`; const payload = { contents: [{ parts: [{ text: prompt }] }] }; if (isJson) payload.generationConfig = { responseMimeType: "application/json" };
+            try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API Error: ${response.status}`); const data = await response.json(); return data.candidates?.[0]?.content?.parts?.[0]?.text; } catch (error) { console.error("AI Error:", error); return null; }
+        }
+        function loadProfile() { const s = localStorage.getItem('physiotrace_user'); if (s) { store.user = JSON.parse(s); document.getElementById('set-gender').value = store.user.gender; document.getElementById('set-age').value = store.user.age; document.getElementById('set-weight').value = store.user.weight; document.getElementById('set-height').value = store.user.height; } calculateBioMetrics(); }
+        function saveProfileUI() { store.user.gender = document.getElementById('set-gender').value; store.user.age = parseFloat(document.getElementById('set-age').value); store.user.weight = parseFloat(document.getElementById('set-weight').value); store.user.height = parseFloat(document.getElementById('set-height').value); localStorage.setItem('physiotrace_user', JSON.stringify(store.user)); calculateBioMetrics(); toggleModal('settings-modal', false); updateVisuals(); }
+        function calculateBioMetrics() { const {weight,height,age,gender}=store.user; document.getElementById('safety-warning').classList.toggle('hidden', age>=12); let bmr=(10*weight)+(6.25*height)-(5*age)+(gender==='male'?5:-161); store.user.bmr=Math.round(bmr); store.user.bsa=(0.007184*Math.pow(weight,0.425)*Math.pow(height,0.725)).toFixed(2); store.user.vd=(weight*0.6).toFixed(1); document.getElementById('val-bmr').textContent=store.user.bmr; document.getElementById('val-bsa').textContent=store.user.bsa; document.getElementById('val-vd').textContent=store.user.vd; }
+        function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
+        function checkDisclaimer() { if(sessionStorage.getItem('physiotrace_accepted')) document.getElementById('disclaimer-gate').style.display='none'; else document.getElementById('btn-accept-disclaimer').onclick=()=>{sessionStorage.setItem('physiotrace_accepted','true'); document.getElementById('disclaimer-gate').style.display='none';}; }
+    </script>
+</body>
+</html>
