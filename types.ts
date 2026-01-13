@@ -4,6 +4,7 @@ export type OrganTarget = 'hepatic' | 'renal' | 'cardiovascular' | 'neurological
 export interface Drug {
   id: string;
   name: string;
+  category: string; // New field for grouping
   description: string;
   halfLifeHours: number;
   bioavailability: number;
@@ -44,4 +45,10 @@ export interface FdaDrugInfo {
   description: string;
   indications: string;
   reactions: string;
+}
+
+export interface ClinicalStatus {
+    message: string;
+    type: 'neutral' | 'warning' | 'danger' | 'success';
+    phase: 'Absorption' | 'Peak' | 'Elimination' | 'Cleared';
 }

@@ -1,31 +1,44 @@
 
 import React from 'react';
-import { Lightbulb, RefreshCw } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { ClinicalStatus } from '../types';
 
-interface SuggestionPanelProps {
-  suggestion: string;
-  isLoading: boolean;
-  onRefresh: () => void;
+interface StatusPanelProps {
+  status: ClinicalStatus;
 }
 
-export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ suggestion, isLoading, onRefresh }) => {
+export const StatusPanel: React.FC<StatusPanelProps> = ({ status }) => {
+  const getStyles = () => {
+    switch(status.type) {
+        case 'danger': return 'bg-red-50 border-red-200 text-red-800';
+        case 'warning': return 'bg-orange-50 border-orange-200 text-orange-800';
+        case 'success': return 'bg-emerald-50 border-emerald-200 text-emerald-800';
+        default: return 'bg-blue-50 border-blue-200 text-blue-800';
+    }
+  };
+
+  const getIcon = () => {
+      switch(status.type) {
+        case 'danger': return <AlertTriangle size={18} className="text-red-600" />;
+        case 'warning': return <AlertTriangle size={18} className="text-orange-500" />;
+        case 'success': return <CheckCircle size={18} className="text-emerald-500" />;
+        default: return <Info size={18} className="text-blue-500" />;
+      }
+  };
+
   return (
-    <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+    <section className={`border rounded-2xl p-4 shadow-sm transition-colors duration-300 ${getStyles()}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Lightbulb size={18} className="text-amber-500" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800">AI Clinical Snapshot</h3>
+          {getIcon()}
+          <h3 className="text-xs font-bold uppercase tracking-wider">Clinical Status</h3>
         </div>
-        <button onClick={onRefresh} disabled={isLoading} className="text-amber-500 hover:text-amber-700 disabled:opacity-50 disabled:cursor-wait">
-          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-        </button>
+        <div className="px-2 py-0.5 bg-white/50 rounded-full text-[10px] font-bold uppercase tracking-widest border border-black/5">
+            {status.phase}
+        </div>
       </div>
-      <div className="text-sm text-amber-900 min-h-[40px] flex items-center">
-        {isLoading ? (
-          <p className="opacity-70 animate-pulse">AI is analyzing...</p>
-        ) : (
-          <p>{suggestion}</p>
-        )}
+      <div className="text-sm min-h-[40px] flex items-center">
+         <p className="font-medium leading-snug">{status.message}</p>
       </div>
     </section>
   );

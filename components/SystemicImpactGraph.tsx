@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { OrganTarget } from '../types';
@@ -15,7 +14,8 @@ export const SystemicImpactGraph: React.FC<SystemicImpactGraphProps> = ({ loads,
     system: formatTitle(system as OrganTarget),
     // Use a baseline of 5 for visual representation of the "normal state" inner polygon
     baseline: 5,
-    'Current Load': Math.max(5, load), // Ensure load is at least baseline to draw shape
+    // Fix: Explicitly cast load to number to avoid unknown type error
+    'Current Load': Math.max(5, load as number), // Ensure load is at least baseline to draw shape
     fullMark: 100,
   }));
 
