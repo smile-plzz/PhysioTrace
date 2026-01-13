@@ -1,0 +1,7 @@
+{
+  "name": "PhysioTrace Digital Twin",
+  "description": "A predictive pharmacokinetic simulation engine that visualizes the metabolic impact of medications on a personalized digital twin using real-time bio-metric calibration.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
