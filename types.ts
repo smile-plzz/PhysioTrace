@@ -1,10 +1,9 @@
-
 export type OrganTarget = 'hepatic' | 'renal' | 'cardiovascular' | 'neurological' | 'gastric';
 
 export interface Drug {
   id: string;
   name: string;
-  category: string; // New field for grouping
+  category: string;
   description: string;
   halfLifeHours: number;
   bioavailability: number;
@@ -14,6 +13,7 @@ export interface Drug {
   metabolism: OrganTarget;
   color: string;
   defaultDoseMg: number;
+  warnings?: string[];
 }
 
 export interface UserProfile {
@@ -27,7 +27,7 @@ export interface UserProfile {
 export interface Dose {
   id: string;
   drugId: string;
-  timestamp: number; // Hours from simulation start
+  timestamp: number;
   amountMg: number;
 }
 
@@ -45,10 +45,25 @@ export interface FdaDrugInfo {
   description: string;
   indications: string;
   reactions: string;
+  clinicalPharmacology: string;
+  warnings: string;
+  dosage: string;
 }
 
 export interface ClinicalStatus {
-    message: string;
-    type: 'neutral' | 'warning' | 'danger' | 'success';
-    phase: 'Absorption' | 'Peak' | 'Elimination' | 'Cleared';
+  message: string;
+  type: 'neutral' | 'warning' | 'danger' | 'success';
+  phase: 'Absorption' | 'Peak' | 'Elimination' | 'Cleared';
+}
+
+export interface RxNormResult {
+  rxcui: string;
+  name: string;
+  synonym?: string;
+}
+
+export interface PeakSummary {
+  peakTimeH: number;
+  peakConcentration: number;
+  clearanceTimeH: number;
 }

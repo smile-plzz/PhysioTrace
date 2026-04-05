@@ -1,178 +1,55 @@
-
 import { Drug } from './types';
 
 export const DRUG_LIBRARY: Drug[] = [
   // Stimulants
-  {
-    id: "caffeine",
-    name: "Caffeine",
-    category: "Stimulant",
-    description: "CNS stimulant. Blocks adenosine receptors.",
-    halfLifeHours: 5.0,
-    bioavailability: 0.99,
-    timeToPeakHours: 0.75,
-    volDistFactor: 0.7,
-    toxicityThresholdMgL: 60.0,
-    metabolism: "neurological",
-    color: "#d97706",
-    defaultDoseMg: 100
-  },
-  {
-    id: "methylphenidate",
-    name: "Methylphenidate",
-    category: "Stimulant",
-    description: "CNS stimulant used for ADHD.",
-    halfLifeHours: 3.5,
-    bioavailability: 0.3,
-    timeToPeakHours: 2.0,
-    volDistFactor: 2.7,
-    toxicityThresholdMgL: 0.04, // approx therapeutic upper bound, actual toxicity higher
-    metabolism: "hepatic",
-    color: "#f97316",
-    defaultDoseMg: 20
-  },
+  { id:"caffeine", name:"Caffeine", category:"Stimulant", description:"CNS stimulant. Blocks adenosine receptors, reducing drowsiness and increasing alertness.", halfLifeHours:5.0, bioavailability:0.99, timeToPeakHours:0.75, volDistFactor:0.7, toxicityThresholdMgL:60.0, metabolism:"neurological", color:"#d97706", defaultDoseMg:100, warnings:["Avoid late afternoon doses to prevent sleep disruption","High doses can cause anxiety and elevated heart rate"] },
+  { id:"methylphenidate", name:"Methylphenidate", category:"Stimulant", description:"CNS stimulant used for ADHD. Blocks dopamine and norepinephrine reuptake.", halfLifeHours:3.5, bioavailability:0.3, timeToPeakHours:2.0, volDistFactor:2.7, toxicityThresholdMgL:0.04, metabolism:"hepatic", color:"#f97316", defaultDoseMg:20, warnings:["Prescripton only","Monitor cardiovascular status","Avoid in patients with heart conditions"] },
+  { id:"modafinil", name:"Modafinil", category:"Stimulant", description:"Wakefulness-promoting agent used for narcolepsy and shift work disorder.", halfLifeHours:15.0, bioavailability:0.80, timeToPeakHours:2.5, volDistFactor:0.9, toxicityThresholdMgL:40.0, metabolism:"hepatic", color:"#f59e0b", defaultDoseMg:200, warnings:["Prescription only","Long half-life — avoid evening doses","May interact with hormonal contraceptives"] },
 
   // Analgesics
-  {
-    id: "ibuprofen",
-    name: "Ibuprofen",
-    category: "Analgesic",
-    description: "NSAID used for pain and inflammation.",
-    halfLifeHours: 2.0,
-    bioavailability: 0.85,
-    timeToPeakHours: 1.5,
-    volDistFactor: 0.15,
-    toxicityThresholdMgL: 80.0,
-    metabolism: "gastric",
-    color: "#ef4444",
-    defaultDoseMg: 400
-  },
-  {
-    id: "paracetamol",
-    name: "Acetaminophen",
-    category: "Analgesic",
-    description: "Analgesic and antipyretic.",
-    halfLifeHours: 2.5,
-    bioavailability: 0.88,
-    timeToPeakHours: 1.0,
-    volDistFactor: 0.95,
-    toxicityThresholdMgL: 150.0,
-    metabolism: "hepatic",
-    color: "#3b82f6",
-    defaultDoseMg: 500
-  },
-  {
-    id: "aspirin",
-    name: "Aspirin",
-    category: "Analgesic",
-    description: "Salicylate used to reduce pain, fever, or inflammation.",
-    halfLifeHours: 0.25, // Very short parent half-life
-    bioavailability: 0.68,
-    timeToPeakHours: 0.5,
-    volDistFactor: 0.17,
-    toxicityThresholdMgL: 300.0,
-    metabolism: "renal",
-    color: "#ec4899",
-    defaultDoseMg: 325
-  },
+  { id:"ibuprofen", name:"Ibuprofen", category:"Analgesic / NSAID", description:"NSAID used for pain, fever, and inflammation. Inhibits COX-1 and COX-2 enzymes.", halfLifeHours:2.0, bioavailability:0.85, timeToPeakHours:1.5, volDistFactor:0.15, toxicityThresholdMgL:80.0, metabolism:"gastric", color:"#ef4444", defaultDoseMg:400, warnings:["Take with food to reduce GI irritation","Avoid with kidney disease","Risk of GI bleeding with long-term use"] },
+  { id:"paracetamol", name:"Acetaminophen", category:"Analgesic", description:"Analgesic and antipyretic. Mechanism involves inhibition of CNS prostaglandin synthesis.", halfLifeHours:2.5, bioavailability:0.88, timeToPeakHours:1.0, volDistFactor:0.95, toxicityThresholdMgL:150.0, metabolism:"hepatic", color:"#3b82f6", defaultDoseMg:500, warnings:["Do not exceed 4g/day — risk of liver failure","Avoid alcohol while taking","Check all OTC products for hidden acetaminophen"] },
+  { id:"aspirin", name:"Aspirin", category:"Analgesic / NSAID", description:"Salicylate NSAID. Irreversibly inhibits COX enzymes; also antiplatelet at low doses.", halfLifeHours:0.25, bioavailability:0.68, timeToPeakHours:0.5, volDistFactor:0.17, toxicityThresholdMgL:300.0, metabolism:"renal", color:"#ec4899", defaultDoseMg:325, warnings:["Avoid in children under 16 (Reye's syndrome risk)","Increases bleeding risk","Avoid before surgery"] },
+  { id:"naproxen", name:"Naproxen", category:"Analgesic / NSAID", description:"Long-acting NSAID for pain and inflammation. Twice-daily dosing due to longer half-life.", halfLifeHours:14.0, bioavailability:0.95, timeToPeakHours:2.0, volDistFactor:0.16, toxicityThresholdMgL:200.0, metabolism:"hepatic", color:"#f43f5e", defaultDoseMg:500, warnings:["GI risk similar to ibuprofen","Avoid in late pregnancy","Monitor renal function with long-term use"] },
+  { id:"codeine", name:"Codeine", category:"Opioid Analgesic", description:"Opioid prodrug converted to morphine by CYP2D6. Used for mild-to-moderate pain.", halfLifeHours:3.0, bioavailability:0.53, timeToPeakHours:1.0, volDistFactor:3.5, toxicityThresholdMgL:0.2, metabolism:"hepatic", color:"#dc2626", defaultDoseMg:30, warnings:["Prescription only","Risk of dependence","Ultra-rapid metabolizers may experience toxicity","Contraindicated in children"] },
 
   // Psychotropics
-  {
-    id: "sertraline",
-    name: "Sertraline",
-    category: "Psychotropic",
-    description: "SSRI antidepressant.",
-    halfLifeHours: 26,
-    bioavailability: 0.44,
-    timeToPeakHours: 6,
-    volDistFactor: 25,
-    toxicityThresholdMgL: 0.5,
-    metabolism: "hepatic",
-    color: "#10b981",
-    defaultDoseMg: 50
-  },
-  {
-    id: "alprazolam",
-    name: "Alprazolam",
-    category: "Psychotropic",
-    description: "Benzodiazepine for anxiety disorders.",
-    halfLifeHours: 11.2,
-    bioavailability: 0.90,
-    timeToPeakHours: 1.5,
-    volDistFactor: 1.0,
-    toxicityThresholdMgL: 0.1,
-    metabolism: "hepatic",
-    color: "#14b8a6",
-    defaultDoseMg: 1
-  },
+  { id:"sertraline", name:"Sertraline", category:"Antidepressant (SSRI)", description:"SSRI antidepressant for depression, anxiety, OCD, PTSD. Once-daily dosing.", halfLifeHours:26, bioavailability:0.44, timeToPeakHours:6, volDistFactor:25, toxicityThresholdMgL:0.5, metabolism:"hepatic", color:"#10b981", defaultDoseMg:50, warnings:["Therapeutic effect takes 2–4 weeks","Do not abruptly stop","Risk of serotonin syndrome when combined with other serotonergic drugs"] },
+  { id:"fluoxetine", name:"Fluoxetine", category:"Antidepressant (SSRI)", description:"Long-acting SSRI. Unique very long half-life means missed doses have less impact.", halfLifeHours:96, bioavailability:0.72, timeToPeakHours:6, volDistFactor:20, toxicityThresholdMgL:0.5, metabolism:"hepatic", color:"#059669", defaultDoseMg:20, warnings:["Strong CYP2D6 inhibitor — many drug interactions","Very long washout period (weeks)","Therapeutic effect takes 4–6 weeks"] },
+  { id:"alprazolam", name:"Alprazolam", category:"Anxiolytic (Benzodiazepine)", description:"Benzodiazepine for anxiety disorders and panic disorder. Enhances GABA activity.", halfLifeHours:11.2, bioavailability:0.90, timeToPeakHours:1.5, volDistFactor:1.0, toxicityThresholdMgL:0.1, metabolism:"hepatic", color:"#14b8a6", defaultDoseMg:1, warnings:["High dependence potential","Prescription only","Dangerous with alcohol or opioids","Rebound anxiety on discontinuation"] },
+  { id:"diazepam", name:"Diazepam", category:"Anxiolytic (Benzodiazepine)", description:"Long-acting benzodiazepine for anxiety, muscle spasm, seizures, and alcohol withdrawal.", halfLifeHours:48, bioavailability:0.93, timeToPeakHours:1.0, volDistFactor:1.1, toxicityThresholdMgL:3.0, metabolism:"hepatic", color:"#0d9488", defaultDoseMg:5, warnings:["Very long half-life — accumulation risk","Prescription only","Dangerous CNS depression with alcohol","Tolerance develops rapidly"] },
+  { id:"quetiapine", name:"Quetiapine", category:"Antipsychotic", description:"Atypical antipsychotic for schizophrenia, bipolar disorder, and adjunct depression.", halfLifeHours:7.0, bioavailability:0.09, timeToPeakHours:1.5, volDistFactor:10.0, toxicityThresholdMgL:1.5, metabolism:"hepatic", color:"#7c3aed", defaultDoseMg:50, warnings:["Prescription only","Causes sedation","Weight gain risk","QT prolongation risk at high doses"] },
 
   // Cardiovascular
-  {
-    id: "atorvastatin",
-    name: "Atorvastatin",
-    category: "Cardiovascular",
-    description: "Statin medication for high cholesterol.",
-    halfLifeHours: 14,
-    bioavailability: 0.14,
-    timeToPeakHours: 1.5,
-    volDistFactor: 5.5,
-    toxicityThresholdMgL: 0.05, // very low concentrations
-    metabolism: "hepatic",
-    color: "#f59e0b",
-    defaultDoseMg: 20
-  },
-  {
-    id: "metoprolol",
-    name: "Metoprolol",
-    category: "Cardiovascular",
-    description: "Beta-blocker for high blood pressure.",
-    halfLifeHours: 3.5,
-    bioavailability: 0.50,
-    timeToPeakHours: 1.5, // Tartrate
-    volDistFactor: 4.2,
-    toxicityThresholdMgL: 0.5,
-    metabolism: "cardiovascular",
-    color: "#6366f1",
-    defaultDoseMg: 50
-  },
+  { id:"atorvastatin", name:"Atorvastatin", category:"Cardiovascular (Statin)", description:"HMG-CoA reductase inhibitor for high cholesterol. Reduces LDL and cardiovascular risk.", halfLifeHours:14, bioavailability:0.14, timeToPeakHours:1.5, volDistFactor:5.5, toxicityThresholdMgL:0.05, metabolism:"hepatic", color:"#f59e0b", defaultDoseMg:20, warnings:["Monitor liver enzymes","Risk of myopathy/rhabdomyolysis","Avoid with certain antibiotics and antifungals","Take at same time daily"] },
+  { id:"metoprolol", name:"Metoprolol", category:"Cardiovascular (Beta-Blocker)", description:"Selective β1-blocker for hypertension, angina, and heart failure.", halfLifeHours:3.5, bioavailability:0.50, timeToPeakHours:1.5, volDistFactor:4.2, toxicityThresholdMgL:0.5, metabolism:"cardiovascular", color:"#6366f1", defaultDoseMg:50, warnings:["Do not abruptly discontinue — risk of rebound hypertension","Monitor heart rate and blood pressure","May mask hypoglycemia symptoms in diabetics"] },
+  { id:"lisinopril", name:"Lisinopril", category:"Cardiovascular (ACE Inhibitor)", description:"ACE inhibitor for hypertension and heart failure. Also protects kidneys in diabetes.", halfLifeHours:12.0, bioavailability:0.25, timeToPeakHours:7.0, volDistFactor:0.11, toxicityThresholdMgL:0.08, metabolism:"renal", color:"#4f46e5", defaultDoseMg:10, warnings:["Monitor potassium — hyperkalemia risk","Check kidney function","Contraindicated in pregnancy","Persistent dry cough is a common side effect"] },
+  { id:"amlodipine", name:"Amlodipine", category:"Cardiovascular (Calcium Channel Blocker)", description:"Dihydropyridine CCB for hypertension and angina. Very long half-life allows once-daily dosing.", halfLifeHours:35, bioavailability:0.64, timeToPeakHours:8.0, volDistFactor:21.0, toxicityThresholdMgL:0.05, metabolism:"hepatic", color:"#4338ca", defaultDoseMg:5, warnings:["Very slow onset — takes days to reach steady state","Ankle swelling common side effect","Avoid grapefruit juice"] },
 
   // Antibiotics
-  {
-    id: "amoxicillin",
-    name: "Amoxicillin",
-    category: "Antibiotic",
-    description: "Penicillin antibiotic.",
-    halfLifeHours: 1.0,
-    bioavailability: 0.95,
-    timeToPeakHours: 2.0,
-    volDistFactor: 0.3,
-    toxicityThresholdMgL: 20.0,
-    metabolism: "renal",
-    color: "#8b5cf6",
-    defaultDoseMg: 500
-  },
-  
-  // Supplements
-  {
-    id: "melatonin",
-    name: "Melatonin",
-    category: "Supplement",
-    description: "Hormone regulating sleep-wake cycles.",
-    halfLifeHours: 0.8,
-    bioavailability: 0.15,
-    timeToPeakHours: 0.5,
-    volDistFactor: 1.2,
-    toxicityThresholdMgL: 500.0,
-    metabolism: "neurological",
-    color: "#8b5cf6",
-    defaultDoseMg: 3
-  }
+  { id:"amoxicillin", name:"Amoxicillin", category:"Antibiotic (Penicillin)", description:"Broad-spectrum penicillin antibiotic. Inhibits bacterial cell wall synthesis.", halfLifeHours:1.0, bioavailability:0.95, timeToPeakHours:2.0, volDistFactor:0.3, toxicityThresholdMgL:20.0, metabolism:"renal", color:"#8b5cf6", defaultDoseMg:500, warnings:["Complete the full course","Allergy cross-reactivity with cephalosporins","Can disrupt gut microbiome","Avoid if penicillin allergic"] },
+  { id:"azithromycin", name:"Azithromycin", category:"Antibiotic (Macrolide)", description:"Macrolide antibiotic with very long tissue half-life. Common 5-day course has prolonged effect.", halfLifeHours:68, bioavailability:0.37, timeToPeakHours:2.5, volDistFactor:31.0, toxicityThresholdMgL:0.5, metabolism:"hepatic", color:"#7c3aed", defaultDoseMg:500, warnings:["QT prolongation risk","Complete the course","Drug interactions with antacids — take 1 hour apart","Long tissue retention even after stopping"] },
+  { id:"ciprofloxacin", name:"Ciprofloxacin", category:"Antibiotic (Fluoroquinolone)", description:"Broad-spectrum fluoroquinolone. DNA gyrase inhibitor effective against gram-negative bacteria.", halfLifeHours:4.0, bioavailability:0.70, timeToPeakHours:1.5, volDistFactor:2.5, toxicityThresholdMgL:5.0, metabolism:"renal", color:"#6d28d9", defaultDoseMg:500, warnings:["Risk of tendon rupture, especially Achilles","Avoid with antacids and dairy — reduces absorption","Not for children (affects cartilage)","Photosensitivity — use sun protection"] },
+
+  // Supplements & OTC
+  { id:"melatonin", name:"Melatonin", category:"Supplement", description:"Endogenous hormone regulating circadian rhythms. Supplemental use for sleep onset and jet lag.", halfLifeHours:0.8, bioavailability:0.15, timeToPeakHours:0.5, volDistFactor:1.2, toxicityThresholdMgL:500.0, metabolism:"neurological", color:"#a855f7", defaultDoseMg:3, warnings:["Take 30–60 minutes before desired sleep time","May cause daytime grogginess at higher doses","Avoid with immunosuppressants"] },
+  { id:"omeprazole", name:"Omeprazole", category:"GI (Proton Pump Inhibitor)", description:"Proton pump inhibitor for GERD, ulcers, and H. pylori eradication. Reduces stomach acid.", halfLifeHours:1.0, bioavailability:0.65, timeToPeakHours:1.5, volDistFactor:0.3, toxicityThresholdMgL:2.0, metabolism:"hepatic", color:"#ec4899", defaultDoseMg:20, warnings:["Take 30 minutes before meal for best effect","Long-term use may reduce B12 and magnesium","May reduce effectiveness of clopidogrel"] },
+  { id:"cetirizine", name:"Cetirizine", category:"Antihistamine", description:"Second-generation H1 antihistamine for allergic rhinitis and urticaria. Minimal sedation.", halfLifeHours:8.0, bioavailability:0.93, timeToPeakHours:1.0, volDistFactor:0.56, toxicityThresholdMgL:0.3, metabolism:"renal", color:"#06b6d4", defaultDoseMg:10, warnings:["Some sedation possible — avoid driving if affected","Avoid in severe kidney impairment"] },
+  { id:"vitamin_d", name:"Vitamin D3", category:"Supplement", description:"Fat-soluble vitamin essential for calcium absorption, bone health, and immune function.", halfLifeHours:720, bioavailability:0.80, timeToPeakHours:12, volDistFactor:1.5, toxicityThresholdMgL:0.25, metabolism:"hepatic", color:"#fbbf24", defaultDoseMg:1, warnings:["Fat-soluble — can accumulate; monitor levels","Excess causes hypercalcemia","Take with fatty meal for best absorption"] },
 ];
 
-export const ACTIVITY_MULTIPLIERS = {
-  1: 0.8, // Sedentary
+export const ACTIVITY_MULTIPLIERS: Record<number, number> = {
+  1: 0.8,
   2: 0.9,
-  3: 1.0, // Normal
+  3: 1.0,
   4: 1.2,
-  5: 1.5  // Highly Active (faster clearance)
+  5: 1.5
+};
+
+export const ORGAN_DESCRIPTIONS: Record<string, string> = {
+  hepatic: 'Liver',
+  renal: 'Kidneys',
+  cardiovascular: 'Heart & Vessels',
+  neurological: 'Brain & CNS',
+  gastric: 'GI Tract',
 };

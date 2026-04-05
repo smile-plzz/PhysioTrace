@@ -1,54 +1,54 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Drug, UserProfile, Dose, OrganTarget, FdaDrugInfo, ClinicalStatus } from './types';
+import { Drug, UserProfile, Dose, FdaDrugInfo, ClinicalStatus } from './types';
 import { DRUG_LIBRARY } from './constants';
-import { runFullSimulation } from './lib/simulation';
+import { runFullSimulation, computePeakSummary } from './lib/simulation';
 import { getFdaDetails, analyzeClinicalStatus } from './services/drugService';
 import { PKGraph } from './components/PKGraph';
 import { SystemicImpactGraph } from './components/SystemicImpactGraph';
 import { DrugInfoPanel } from './components/DrugInfoPanel';
-import { StatusPanel } from './components/SuggestionPanel'; // Renamed internally
+import { StatusPanel } from './components/SuggestionPanel';
 import { ClearanceImpactGraph } from './components/ClearanceImpactGraph';
-import { Activity, Clock, Search, User, ShieldAlert, Zap, Plus, Trash2, X, AlertOctagon, Filter } from 'lucide-react';
+import { DrugSearchPanel } from './components/DrugSearchPanel';
+import { PeakSummaryBar } from './components/PeakSummaryBar';
+import { OrganImpactCards } from './components/OrganImpactCards';
+import { DisclaimerModal } from './components/DisclaimerModal';
+import {
+  Activity, Clock, User, ShieldAlert, Plus, Trash2, AlertOctagon, Zap, ChevronDown, ChevronUp
+} from 'lucide-react';
 
 type GraphTab = 'pk' | 'activity';
 
+const SAVED_PROFILE_KEY = 'physiotrace_user_profile';
+const DISCLAIMER_KEY = 'physiotrace_disclaimer_accepted';
+
+const loadProfile = (): UserProfile => {
+  try {
+    const s = localStorage.getItem(SAVED_PROFILE_KEY);
+    if (s) return JSON.parse(s);
+  } catch {}
+  return { age:30, gender:'male', weight:75, height:180, activityLevel:3 };
+};
+
 const App: React.FC = () => {
-  // State
-  const [user, setUser] = useState<UserProfile>({
-    age: 30,
-    gender: 'male',
-    weight: 75,
-    height: 180,
-    activityLevel: 3
-  });
-  
-  // Start with a default subset or just the first one
+  const [showDisclaimer, setShowDisclaimer] = useState(() => !localStorage.getItem(DISCLAIMER_KEY));
+  const [user, setUser] = useState<UserProfile>(loadProfile);
   const [activeDrugs, setActiveDrugs] = useState<Drug[]>([DRUG_LIBRARY[0]]);
   const [selectedDrugId, setSelectedDrugId] = useState<string>(DRUG_LIBRARY[0].id);
-  const [doses, setDoses] = useState<Dose[]>([{
-    id: 'initial',
-    drugId: DRUG_LIBRARY[0].id,
-    timestamp: 0,
-    amountMg: DRUG_LIBRARY[0].defaultDoseMg
-  }]);
-  
+  const [doses, setDoses] = useState<Dose[]>([{ id:'initial', drugId:DRUG_LIBRARY[0].id, timestamp:0, amountMg:DRUG_LIBRARY[0].defaultDoseMg }]);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [hoveredTime, setHoveredTime] = useState<number | null>(null);
-  
-  // Search / Library State
-  const [librarySearch, setLibrarySearch] = useState("");
-  const [drugDetails, setDrugDetails] = useState<FdaDrugInfo | null>(null);
+  const [hoveredTime, setHoveredTime] = useState<number|null>(null);
+  const [drugDetails, setDrugDetails] = useState<FdaDrugInfo|null>(null);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [activeGraphTab, setActiveGraphTab] = useState<GraphTab>('pk');
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
 
-  // Derived Data
-  const selectedDrug = useMemo(() => 
-    activeDrugs.find(d => d.id === selectedDrugId) || activeDrugs[0]
-  , [activeDrugs, selectedDrugId]);
+  const selectedDrug = useMemo(() =>
+    activeDrugs.find(d => d.id === selectedDrugId) || activeDrugs[0],
+    [activeDrugs, selectedDrugId]
+  );
 
   const simulationData = useMemo(() => {
-    const timeRange = Array.from({ length: 97 }, (_, i) => i * 0.25); 
+    const timeRange = Array.from({length:97}, (_,i) => i * 0.25);
     return runFullSimulation(timeRange, doses, activeDrugs, user);
   }, [doses, activeDrugs, user]);
 
@@ -56,356 +56,326 @@ const App: React.FC = () => {
 
   const currentState = useMemo(() => {
     const idx = Math.round(displayTime * 4);
-    return simulationData[idx] || simulationData[0];
+    return simulationData[Math.min(idx, simulationData.length-1)] || simulationData[0];
   }, [simulationData, displayTime]);
 
-  // Previous state for slope calculation
   const prevState = useMemo(() => {
     const idx = Math.max(0, Math.round(displayTime * 4) - 1);
     return simulationData[idx] || simulationData[0];
   }, [simulationData, displayTime]);
 
-  const clinicalStatus: ClinicalStatus = useMemo(() => {
-    return analyzeClinicalStatus(
-        currentState.concentration,
-        prevState.concentration,
-        selectedDrug.toxicityThresholdMgL,
-        displayTime
-    );
-  }, [currentState, prevState, selectedDrug, displayTime]);
+  const clinicalStatus: ClinicalStatus = useMemo(() =>
+    analyzeClinicalStatus(currentState.concentration, prevState.concentration, selectedDrug.toxicityThresholdMgL, displayTime),
+    [currentState, prevState, selectedDrug, displayTime]
+  );
 
-  // Drug Interaction Check
+  const peakSummary = useMemo(() => computePeakSummary(simulationData, selectedDrug), [simulationData, selectedDrug]);
+
   const metabolicWarning = useMemo(() => {
-      const pathways = activeDrugs.map(d => d.metabolism);
-      const duplicates = pathways.filter((item, index) => pathways.indexOf(item) !== index);
-      if (duplicates.length > 0) {
-          return `Metabolic crowding detected: Multiple drugs competing for ${duplicates[0]} clearance pathway.`;
-      }
-      return null;
+    const pathways = activeDrugs.map(d => d.metabolism);
+    const dupes = pathways.filter((p,i) => pathways.indexOf(p) !== i);
+    return dupes.length > 0
+      ? `Metabolic crowding: multiple drugs competing for the ${dupes[0]} clearance pathway. Expect altered concentrations.`
+      : null;
   }, [activeDrugs]);
 
-  // Effects
   useEffect(() => {
-    const fetchDetails = async () => {
-        if (!selectedDrug) return;
-        setIsDetailsLoading(true);
-        const details = await getFdaDetails(selectedDrug.name);
-        setDrugDetails(details);
-        setIsDetailsLoading(false);
-    };
-    fetchDetails();
+    localStorage.setItem(SAVED_PROFILE_KEY, JSON.stringify(user));
+  }, [user]);
+
+  useEffect(() => {
+    setIsDetailsLoading(true);
+    getFdaDetails(selectedDrug.name).then(d => {
+      setDrugDetails(d);
+      setIsDetailsLoading(false);
+    });
   }, [selectedDrugId]);
 
-  // Handlers
   const handleAddDose = () => {
-    const newDose: Dose = {
-      id: Math.random().toString(36).substr(2, 9),
+    const d: Dose = {
+      id: Math.random().toString(36).substr(2,9),
       drugId: selectedDrugId,
       timestamp: currentTime,
-      amountMg: selectedDrug.defaultDoseMg
+      amountMg: selectedDrug.defaultDoseMg,
     };
-    setDoses([...doses, newDose].sort((a,b) => a.timestamp - b.timestamp));
-  };
-  
-  const handleUpdateDose = (doseId: string, newAmount: number) => {
-    setDoses(doses.map(d => d.id === doseId ? {...d, amountMg: newAmount } : d));
+    setDoses(prev => [...prev, d].sort((a,b) => a.timestamp - b.timestamp));
   };
 
   const handleAddDrugFromLibrary = (drug: Drug) => {
-      if (!activeDrugs.some(d => d.id === drug.id)) {
-          setActiveDrugs([...activeDrugs, drug]);
-      }
-      setSelectedDrugId(drug.id);
-      setLibrarySearch(""); // clear search to close or reset view
+    if (!activeDrugs.some(d => d.id === drug.id)) setActiveDrugs(prev => [...prev, drug]);
+    setSelectedDrugId(drug.id);
   };
 
   const handleRemoveDrug = (drugId: string) => {
-    if (activeDrugs.length === 1) return; // Prevent removing last drug
-    const newActive = activeDrugs.filter(d => d.id !== drugId);
-    setActiveDrugs(newActive);
-    setDoses(doses.filter(d => d.drugId !== drugId));
-    if (selectedDrugId === drugId) {
-        setSelectedDrugId(newActive[0].id);
-    }
-  };
-  
-  const getConcentrationColor = (concentration: number, threshold: number) => {
-      if (threshold === 0) return 'bg-blue-400';
-      const ratio = concentration / threshold;
-      if (ratio > 0.8) return 'bg-red-500';
-      if (ratio > 0.5) return 'bg-yellow-400';
-      return 'bg-blue-400';
+    if (activeDrugs.length === 1) return;
+    const next = activeDrugs.filter(d => d.id !== drugId);
+    setActiveDrugs(next);
+    setDoses(prev => prev.filter(d => d.drugId !== drugId));
+    if (selectedDrugId === drugId) setSelectedDrugId(next[0].id);
   };
 
-  const handleGraphMouseMove = (e: any) => {
-    if (e && e.activePayload && e.activePayload.length) {
-      setHoveredTime(e.activePayload[0].payload.time);
-    }
-  };
+  const concPct = selectedDrug.toxicityThresholdMgL > 0
+    ? Math.min((currentState.concentration / selectedDrug.toxicityThresholdMgL) * 100, 100)
+    : 0;
+  const concColor = concPct > 80 ? '#ef4444' : concPct > 50 ? '#f97316' : '#3b82f6';
 
-  const filteredLibrary = DRUG_LIBRARY.filter(d => 
-    d.name.toLowerCase().includes(librarySearch.toLowerCase()) || 
-    d.category.toLowerCase().includes(librarySearch.toLowerCase())
-  );
+  const acceptDisclaimer = () => {
+    localStorage.setItem(DISCLAIMER_KEY, '1');
+    setShowDisclaimer(false);
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',background:'#f8fafc',fontFamily:"'Inter',system-ui,sans-serif"}}>
+      {showDisclaimer && <DisclaimerModal onAccept={acceptDisclaimer} />}
+
       {/* Header */}
-      <header className="bg-white border-b px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm/50 backdrop-blur-md bg-white/90">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/20">
-            <Activity size={22} />
+      <header style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'0 24px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px',position:'sticky',top:0,zIndex:50,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+          <div style={{background:'linear-gradient(135deg,#2563eb,#4f46e5)',padding:'8px',borderRadius:'10px',display:'flex',boxShadow:'0 4px 12px rgba(37,99,235,0.3)'}}>
+            <Activity size={18} color="white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">PhysioTrace <span className="text-blue-600">Pro</span></h1>
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Digital Twin Simulator</p>
+            <h1 style={{fontSize:'17px',fontWeight:800,color:'#0f172a',margin:0,letterSpacing:'-0.01em'}}>
+              PhysioTrace <span style={{color:'#2563eb'}}>Pro</span>
+            </h1>
+            <p style={{fontSize:'9px',color:'#94a3b8',margin:0,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase'}}>Digital Twin Simulator</p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-slate-800">{user.weight}kg • {user.age}yr • {user.gender === 'male' ? 'M' : 'F'}</p>
-            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Subject Parameters</p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
-             <User size={20} className="text-slate-400" />
-          </div>
-        </div>
+        <button
+          onClick={() => setShowProfileEdit(v => !v)}
+          style={{display:'flex',alignItems:'center',gap:'8px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:'10px',padding:'6px 12px',cursor:'pointer'}}
+        >
+          <User size={14} color="#64748b" />
+          <span style={{fontSize:'12px',fontWeight:600,color:'#334155'}}>{user.weight}kg · {user.age}yr · {user.gender==='male'?'M':'F'} · Activity {user.activityLevel}/5</span>
+          {showProfileEdit ? <ChevronUp size={12} color="#94a3b8"/> : <ChevronDown size={12} color="#94a3b8"/>}
+        </button>
       </header>
 
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Left Control Panel */}
-        <aside className="w-full md:w-80 bg-white border-r flex flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-            <div className="p-4 border-b bg-slate-50/50">
-                <div className="relative">
-                    <input 
-                        type="text" 
-                        placeholder="Filter Library..." 
-                        className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                        value={librarySearch}
-                        onChange={(e) => setLibrarySearch(e.target.value)}
-                    />
-                    <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                </div>
+      {/* Profile editor */}
+      {showProfileEdit && (
+        <div style={{background:'white',borderBottom:'1px solid #e2e8f0',padding:'16px 24px',display:'flex',gap:'20px',flexWrap:'wrap',alignItems:'flex-end'}}>
+          {[
+            {label:'Age (yrs)', key:'age', min:12, max:100, step:1},
+            {label:'Weight (kg)', key:'weight', min:30, max:200, step:1},
+            {label:'Height (cm)', key:'height', min:130, max:220, step:1},
+          ].map(({label,key,min,max,step}) => (
+            <div key={key}>
+              <p style={{fontSize:'10px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 4px'}}>{label}</p>
+              <input type="number" min={min} max={max} step={step}
+                value={(user as any)[key]}
+                onChange={e => setUser(u => ({...u,[key]:+e.target.value}))}
+                style={{width:'80px',padding:'6px 8px',border:'1px solid #e2e8f0',borderRadius:'8px',fontSize:'13px',fontWeight:600,color:'#0f172a',outline:'none'}} />
             </div>
-
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                 <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <Filter size={12} /> Active Protocol
-                 </h2>
-                 <div className="space-y-2 mb-6">
-                    {activeDrugs.map(drug => (
-                        <div key={drug.id} className="relative group">
-                            <button
-                            onClick={() => setSelectedDrugId(drug.id)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 ${
-                                selectedDrugId === drug.id 
-                                ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500 shadow-sm' 
-                                : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'
-                            }`}
-                            >
-                            <div className="w-2 h-2 rounded-full ring-2 ring-white shadow-sm" style={{ backgroundColor: drug.color }} />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-slate-800 truncate">{drug.name}</p>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{drug.category}</span>
-                                    <span className="text-[10px] text-slate-400 capitalize">{drug.metabolism}</span>
-                                </div>
-                            </div>
-                            </button>
-                            {activeDrugs.length > 1 && (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handleRemoveDrug(drug.id); }}
-                                    className="absolute top-2 right-2 p-1.5 rounded-md text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                    <X size={14}/>
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                 </div>
-
-                 {librarySearch && (
-                     <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Library Matches</h2>
-                        <div className="space-y-1">
-                            {filteredLibrary.map(drug => (
-                                <button
-                                    key={drug.id}
-                                    onClick={() => handleAddDrugFromLibrary(drug)}
-                                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 text-left text-sm group"
-                                >
-                                    <span className="font-medium text-slate-700">{drug.name}</span>
-                                    <span className="text-[10px] text-slate-400 group-hover:text-blue-600 transition-colors">+ Add</span>
-                                </button>
-                            ))}
-                        </div>
-                     </div>
-                 )}
-
-                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Dose Schedule</h2>
-                <div className="space-y-2 mb-6">
-                    {doses.map((dose) => {
-                        const drugInfo = activeDrugs.find(d => d.id === dose.drugId);
-                        if (!drugInfo) return null;
-                        return (
-                        <div key={dose.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100/80">
-                            <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: drugInfo.color}}></div>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-700">{drugInfo.name}</p>
-                                    <p className="text-[10px] text-slate-500 font-mono">T+{dose.timestamp.toFixed(1)}h</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                            <input 
-                                type="number"
-                                value={dose.amountMg}
-                                onChange={(e) => handleUpdateDose(dose.id, Math.max(0, parseInt(e.target.value) || 0))}
-                                className="w-16 text-right font-bold bg-white border border-slate-200 rounded px-1 py-0.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                            />
-                            <button 
-                                onClick={() => setDoses(doses.filter(d => d.id !== dose.id))}
-                                className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                            </div>
-                        </div>
-                        )
-                    })}
-                    <button 
-                        onClick={handleAddDose}
-                        className="w-full py-2 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all font-bold text-xs flex items-center justify-center gap-2"
-                    >
-                        <Plus size={14} /> Add {selectedDrug.name} Dose
-                    </button>
-                </div>
-                
-                <StatusPanel status={clinicalStatus} />
-                
-                {metabolicWarning && (
-                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-100 rounded-xl flex gap-2 items-start">
-                        <AlertOctagon className="text-yellow-600 shrink-0 mt-0.5" size={16} />
-                        <p className="text-xs text-yellow-800 leading-tight">{metabolicWarning}</p>
-                    </div>
-                )}
+          ))}
+          <div>
+            <p style={{fontSize:'10px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 4px'}}>Gender</p>
+            <div style={{display:'flex',gap:'4px'}}>
+              {(['male','female'] as const).map(g => (
+                <button key={g} onClick={() => setUser(u => ({...u,gender:g}))}
+                  style={{padding:'6px 12px',borderRadius:'8px',border:'1px solid',fontSize:'12px',fontWeight:600,cursor:'pointer',
+                    borderColor:user.gender===g?'#2563eb':'#e2e8f0',
+                    background:user.gender===g?'#eff6ff':'white',
+                    color:user.gender===g?'#2563eb':'#64748b'}}>
+                  {g.charAt(0).toUpperCase()+g.slice(1)}
+                </button>
+              ))}
             </div>
-            
-            <div className="p-4 border-t bg-slate-50/50">
-                 <div className="bg-slate-900 rounded-xl p-4 text-white shadow-xl relative overflow-hidden group">
-                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                         <Zap size={64} />
-                     </div>
-                     <div className="relative z-10">
-                        <div className="flex justify-between items-end mb-2">
-                           <span className="text-[10px] uppercase font-bold text-slate-400">Plasma Level</span>
-                           <span className="text-2xl font-black tabular-nums tracking-tight">{currentState.concentration.toFixed(1)} <span className="text-sm font-medium text-slate-500">mg/L</span></span>
-                        </div>
-                        <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                            <div 
-                                className={`h-full transition-all duration-500 ${getConcentrationColor(currentState.concentration, selectedDrug.toxicityThresholdMgL)}`} 
-                                style={{ width: `${Math.min((currentState.concentration / (selectedDrug.toxicityThresholdMgL || 1)) * 100, 100)}%` }}
-                            />
-                        </div>
-                     </div>
-                 </div>
-            </div>
-        </aside>
-
-        {/* Center Dashboard */}
-        <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-slate-50/80">
-          {/* Top Info Bar */}
-          <div className="flex flex-col md:flex-row gap-4 items-stretch justify-between">
-             <div className="glass rounded-2xl p-4 shadow-sm flex items-center gap-4 min-w-[200px]">
-                 <div className="bg-blue-50 p-3 rounded-xl text-blue-600">
-                     <Clock size={24} />
-                 </div>
-                 <div>
-                     <div className="text-2xl font-black text-slate-800 tabular-nums">T+{displayTime.toFixed(1)}<span className="text-sm font-bold text-slate-400 ml-1">h</span></div>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Simulation Time</p>
-                 </div>
-             </div>
-
-             <div className="flex-1 glass rounded-2xl p-4 shadow-sm flex flex-col justify-center">
-                <input 
-                    type="range" 
-                    min="0" 
-                    max="24" 
-                    step="0.1" 
-                    value={displayTime}
-                    onChange={(e) => setCurrentTime(parseFloat(e.target.value))}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-500 transition-all"
-                />
-                <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                    <span>0h</span>
-                    <span>12h</span>
-                    <span>24h</span>
-                </div>
-             </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-2 glass rounded-3xl p-6 relative shadow-sm hover:shadow-md transition-shadow flex flex-col">
-               <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                      <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Organ Stress Load</span>
-                  </div>
-               </div>
-               <SystemicImpactGraph loads={currentState.organLoads} color={selectedDrug.color} />
-            </div>
-
-            <div className="lg:col-span-3 flex flex-col gap-6">
-               <DrugInfoPanel details={drugDetails} isLoading={isDetailsLoading} />
-
-              <div className="glass rounded-3xl p-6 flex-1 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center bg-slate-100/80 p-1 rounded-lg">
-                       <button 
-                         onClick={() => setActiveGraphTab('pk')}
-                         className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeGraphTab === 'pk' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                       >
-                         Pharmacokinetics
-                       </button>
-                       <button 
-                         onClick={() => setActiveGraphTab('activity')}
-                         className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeGraphTab === 'activity' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                       >
-                         Metabolic Impact
-                       </button>
-                    </div>
-                    {activeGraphTab === 'pk' && (
-                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-rose-500 bg-rose-50 px-2 py-1 rounded-md border border-rose-100">
-                           <ShieldAlert size={12} /> Toxicity Threshold
-                        </div>
-                    )}
-                </div>
-
-                {activeGraphTab === 'pk' ? (
-                  <PKGraph 
-                      data={simulationData} 
-                      displayTime={displayTime} 
-                      toxicityThreshold={selectedDrug.toxicityThresholdMgL}
-                      color={selectedDrug.color}
-                      onMouseMove={handleGraphMouseMove}
-                      onMouseLeave={() => setHoveredTime(null)}
-                    />
-                ) : (
-                    <ClearanceImpactGraph
-                      doses={doses}
-                      drugs={activeDrugs}
-                      user={user}
-                      displayTime={displayTime}
-                      onMouseMove={handleGraphMouseMove}
-                      onMouseLeave={() => setHoveredTime(null)}
-                    />
-                )}
-              </div>
+          <div>
+            <p style={{fontSize:'10px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 4px'}}>Activity Level</p>
+            <div style={{display:'flex',gap:'4px'}}>
+              {([1,2,3,4,5] as const).map(l => (
+                <button key={l} onClick={() => setUser(u => ({...u,activityLevel:l}))}
+                  style={{width:'32px',height:'32px',borderRadius:'8px',border:'1px solid',fontSize:'12px',fontWeight:700,cursor:'pointer',
+                    borderColor:user.activityLevel===l?'#2563eb':'#e2e8f0',
+                    background:user.activityLevel===l?'#2563eb':'white',
+                    color:user.activityLevel===l?'white':'#64748b'}}>
+                  {l}
+                </button>
+              ))}
             </div>
           </div>
         </div>
+      )}
+
+      <main style={{flex:1,display:'flex',flexDirection:'row',overflow:'hidden'}}>
+
+        {/* Left: Drug browser */}
+        <aside style={{width:'260px',background:'white',borderRight:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}}>
+          <DrugSearchPanel
+            activeDrugs={activeDrugs}
+            selectedDrugId={selectedDrugId}
+            onSelect={d => setSelectedDrugId(d.id)}
+            onAdd={handleAddDrugFromLibrary}
+            onRemove={handleRemoveDrug}
+          />
+        </aside>
+
+        {/* Center: Simulation controls + charts */}
+        <div style={{flex:1,overflowY:'auto',padding:'20px',display:'flex',flexDirection:'column',gap:'16px',minWidth:0}}>
+
+          {/* Time slider */}
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:'14px',padding:'14px 20px',display:'flex',alignItems:'center',gap:'16px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'8px',flexShrink:0}}>
+              <Clock size={16} color="#64748b" />
+              <span style={{fontSize:'20px',fontWeight:800,color:'#0f172a',fontVariantNumeric:'tabular-nums'}}>T+{displayTime.toFixed(1)}<span style={{fontSize:'12px',fontWeight:500,color:'#94a3b8',marginLeft:'2px'}}>h</span></span>
+            </div>
+            <input type="range" min={0} max={24} step={0.1} value={displayTime}
+              onChange={e => setCurrentTime(+e.target.value)}
+              style={{flex:1,accentColor:'#2563eb',height:'4px'}} />
+            <div style={{display:'flex',gap:'12px',fontSize:'10px',color:'#94a3b8',fontWeight:600,flexShrink:0}}>
+              <span>0h</span><span>12h</span><span>24h</span>
+            </div>
+          </div>
+
+          {/* Peak summary */}
+          <PeakSummaryBar summary={peakSummary} drug={selectedDrug} />
+
+          {/* Dose schedule */}
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:'14px',padding:'16px 20px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}}>
+              <h3 style={{fontSize:'12px',fontWeight:700,color:'#334155',textTransform:'uppercase',letterSpacing:'0.07em',margin:0}}>Dose Schedule</h3>
+              <button onClick={handleAddDose}
+                style={{display:'flex',alignItems:'center',gap:'5px',padding:'5px 10px',background:'#eff6ff',color:'#2563eb',border:'1px solid #bfdbfe',borderRadius:'7px',fontSize:'11px',fontWeight:700,cursor:'pointer'}}>
+                <Plus size={12}/> Add {selectedDrug.name} at T+{currentTime.toFixed(1)}h
+              </button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+              {doses.map(dose => {
+                const drug = activeDrugs.find(d => d.id === dose.drugId);
+                if (!drug) return null;
+                return (
+                  <div key={dose.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:'#f8fafc',borderRadius:'8px',border:'1px solid #e2e8f0'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                      <div style={{width:'6px',height:'6px',borderRadius:'50%',background:drug.color}}/>
+                      <div>
+                        <p style={{fontSize:'12px',fontWeight:700,color:'#0f172a',margin:0}}>{drug.name}</p>
+                        <p style={{fontSize:'10px',color:'#94a3b8',margin:0,fontFamily:'monospace'}}>T+{dose.timestamp.toFixed(1)}h</p>
+                      </div>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                      <input type="number" value={dose.amountMg}
+                        onChange={e => setDoses(prev => prev.map(d => d.id===dose.id ? {...d,amountMg:Math.max(0,+e.target.value)} : d))}
+                        style={{width:'64px',textAlign:'right',fontWeight:700,fontSize:'12px',border:'1px solid #e2e8f0',borderRadius:'6px',padding:'3px 6px',background:'white',color:'#0f172a'}} />
+                      <span style={{fontSize:'10px',color:'#94a3b8'}}>mg</span>
+                      <button onClick={() => setDoses(prev => prev.filter(d => d.id!==dose.id))}
+                        style={{background:'none',border:'none',cursor:'pointer',color:'#cbd5e1',padding:'4px',display:'flex',borderRadius:'4px'}}>
+                        <Trash2 size={13}/>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Status + warnings */}
+          <StatusPanel status={clinicalStatus} />
+          {selectedDrug.warnings && selectedDrug.warnings.length > 0 && (
+            <div style={{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:'12px',padding:'12px 14px'}}>
+              <p style={{fontSize:'10px',fontWeight:700,color:'#92400e',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 6px',display:'flex',alignItems:'center',gap:'5px'}}>
+                <AlertOctagon size={12}/> Drug-Specific Warnings
+              </p>
+              <ul style={{margin:0,paddingLeft:'16px'}}>
+                {selectedDrug.warnings.map((w,i) => (
+                  <li key={i} style={{fontSize:'11px',color:'#78350f',lineHeight:1.5,marginBottom:'2px'}}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {metabolicWarning && (
+            <div style={{background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:'12px',padding:'12px 14px',display:'flex',gap:'8px',alignItems:'flex-start'}}>
+              <AlertOctagon size={14} color="#ea580c" style={{flexShrink:0,marginTop:'1px'}}/>
+              <p style={{fontSize:'12px',color:'#7c2d12',margin:0,lineHeight:1.5}}>{metabolicWarning}</p>
+            </div>
+          )}
+
+          {/* Plasma level bar */}
+          <div style={{background:'#0f172a',borderRadius:'14px',padding:'16px 20px',color:'white',position:'relative',overflow:'hidden'}}>
+            <div style={{position:'absolute',top:0,right:0,padding:'16px',opacity:0.08}}>
+              <Zap size={64}/>
+            </div>
+            <div style={{position:'relative'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:'8px'}}>
+                <span style={{fontSize:'10px',fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'0.07em'}}>Plasma Concentration Now</span>
+                <span style={{fontSize:'26px',fontWeight:900,letterSpacing:'-0.02em',fontVariantNumeric:'tabular-nums'}}>
+                  {currentState.concentration.toFixed(2)} <span style={{fontSize:'13px',fontWeight:400,color:'#64748b'}}>mg/L</span>
+                </span>
+              </div>
+              <div style={{height:'6px',background:'#1e293b',borderRadius:'99px',overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${concPct}%`,background:concColor,borderRadius:'99px',transition:'width 0.5s ease,background 0.3s'}}/>
+              </div>
+              <p style={{fontSize:'10px',color:'#475569',margin:'5px 0 0'}}>{Math.round(concPct)}% of toxicity threshold · {selectedDrug.name}</p>
+            </div>
+          </div>
+
+          {/* Graphs */}
+          <div style={{background:'white',border:'1px solid #e2e8f0',borderRadius:'14px',padding:'16px 20px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px'}}>
+              <div style={{display:'flex',background:'#f1f5f9',borderRadius:'8px',padding:'3px',gap:'2px'}}>
+                {(['pk','activity'] as GraphTab[]).map(tab => (
+                  <button key={tab} onClick={() => setActiveGraphTab(tab)}
+                    style={{padding:'5px 12px',fontSize:'11px',fontWeight:700,borderRadius:'6px',border:'none',cursor:'pointer',
+                      background:activeGraphTab===tab?'white':'transparent',
+                      color:activeGraphTab===tab?'#2563eb':'#64748b',
+                      boxShadow:activeGraphTab===tab?'0 1px 4px rgba(0,0,0,0.08)':'none'}}>
+                    {tab==='pk'?'Pharmacokinetics':'Activity Impact'}
+                  </button>
+                ))}
+              </div>
+              {activeGraphTab==='pk' && (
+                <span style={{fontSize:'10px',fontWeight:700,color:'#ef4444',background:'#fef2f2',padding:'3px 8px',borderRadius:'6px',display:'flex',alignItems:'center',gap:'4px',border:'1px solid #fecaca'}}>
+                  <ShieldAlert size={11}/> Toxicity Threshold
+                </span>
+              )}
+            </div>
+            {activeGraphTab==='pk'
+              ? <PKGraph data={simulationData} displayTime={displayTime} toxicityThreshold={selectedDrug.toxicityThresholdMgL} color={selectedDrug.color} onMouseMove={e => { if(e?.activePayload?.[0]) setHoveredTime(e.activePayload[0].payload.time); }} onMouseLeave={() => setHoveredTime(null)} />
+              : <ClearanceImpactGraph doses={doses} drugs={activeDrugs} user={user} displayTime={displayTime} onMouseMove={e => { if(e?.activePayload?.[0]) setHoveredTime(e.activePayload[0].payload.time); }} onMouseLeave={() => setHoveredTime(null)} />
+            }
+          </div>
+
+          {/* FDA Info */}
+          <DrugInfoPanel details={drugDetails} isLoading={isDetailsLoading} />
+        </div>
+
+        {/* Right: Organ impact */}
+        <aside style={{width:'260px',background:'white',borderLeft:'1px solid #e2e8f0',padding:'16px',overflowY:'auto',flexShrink:0,display:'flex',flexDirection:'column',gap:'16px'}}>
+          <div>
+            <p style={{fontSize:'10px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em',margin:'0 0 10px',display:'flex',alignItems:'center',gap:'5px'}}>
+              <span style={{width:'6px',height:'6px',borderRadius:'50%',background:'#ef4444',display:'inline-block',animation:'pulse 2s infinite'}}/>
+              Organ Stress Load
+            </p>
+            <SystemicImpactGraph loads={currentState.organLoads} color={selectedDrug.color} />
+          </div>
+          <div>
+            <p style={{fontSize:'10px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em',margin:'0 0 10px'}}>Body Impact Analysis</p>
+            <OrganImpactCards loads={currentState.organLoads} primaryOrgan={selectedDrug.metabolism} />
+          </div>
+          <div style={{background:'#f8fafc',borderRadius:'10px',padding:'12px',border:'1px solid #e2e8f0',marginTop:'auto'}}>
+            <p style={{fontSize:'10px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 4px'}}>Selected Drug</p>
+            <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+              <div style={{width:'8px',height:'8px',borderRadius:'50%',background:selectedDrug.color}}/>
+              <span style={{fontSize:'13px',fontWeight:700,color:'#0f172a'}}>{selectedDrug.name}</span>
+            </div>
+            <p style={{fontSize:'11px',color:'#64748b',margin:'4px 0 0',lineHeight:1.5}}>{selectedDrug.description}</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px',marginTop:'10px'}}>
+              {[
+                {label:'Half-Life', value:`${selectedDrug.halfLifeHours}h`},
+                {label:'Peak Time', value:`${selectedDrug.timeToPeakHours}h`},
+                {label:'Bioavailability', value:`${Math.round(selectedDrug.bioavailability*100)}%`},
+                {label:'Default Dose', value:`${selectedDrug.defaultDoseMg}mg`},
+              ].map(({label,value}) => (
+                <div key={label} style={{background:'white',borderRadius:'6px',padding:'6px 8px',border:'1px solid #e2e8f0'}}>
+                  <p style={{fontSize:'9px',color:'#94a3b8',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em',margin:0}}>{label}</p>
+                  <p style={{fontSize:'13px',fontWeight:700,color:'#0f172a',margin:0}}>{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
       </main>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
     </div>
   );
 };
